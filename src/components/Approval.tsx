@@ -5,7 +5,7 @@ import { Plus, Info, Trash2, Search, ExternalLink, CheckCircle2, XCircle, Clock,
 import { ApprovalRecord, approvalSchema, Region, QuoteType, ApprovalStatus } from '../types';
 import { Card, Button, Badge } from './UI';
 import { cn, formatCurrency, getStatusColor } from '../lib/utils';
-import { CHECK_PASSWORD } from '../constants';
+import { loginWithGoogle } from '../firebase';
 
 interface ApprovalProps {
   data: ApprovalRecord[];
@@ -14,7 +14,7 @@ interface ApprovalProps {
   onUpdateStatus: (id: string, status: ApprovalStatus) => void;
   onBatchUpdateStatus: (ids: string[], status: ApprovalStatus) => void;
   isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
+  user: any;
 }
 
 export function Approval({ 
@@ -24,20 +24,13 @@ export function Approval({
   onUpdateStatus, 
   onBatchUpdateStatus,
   isAdmin,
-  setIsAdmin 
+  user
 }: ApprovalProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Selection State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Password Modal State
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [pendingAction, setPendingAction] = useState<{ id: string, status: ApprovalStatus } | null>(null);
-  const [isBatchAction, setIsBatchAction] = useState(false);
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     resolver: zodResolver(approvalSchema),
@@ -82,33 +75,6 @@ export function Approval({
   const handleStatusClick = (id: string, status: ApprovalStatus) => {
     if (isAdmin) {
       onUpdateStatus(id, status);
-      return;
-    }
-    setPendingAction({ id, status });
-    setIsBatchAction(false);
-    setShowPasswordModal(true);
-    setPasswordInput('');
-    setPasswordError('');
-  };
-
-  const confirmPassword = () => {
-    if (passwordInput === CHECK_PASSWORD) {
-      if (pendingAction) {
-        onUpdateStatus(pendingAction.id, pendingAction.status);
-      } else if (isBatchAction) {
-        onBatchUpdateStatus(selectedIds, '通过');
-        setSelectedIds([]);
-      } else {
-        // This was a login action
-        setIsAdmin(true);
-      }
-      setShowPasswordModal(false);
-      setPendingAction(null);
-      setIsBatchAction(false);
-      setPasswordInput('');
-      setPasswordError('');
-    } else {
-      setPasswordError('密码错误，请重试');
     }
   };
 
@@ -127,13 +93,10 @@ export function Approval({
   };
 
   const handleBatchApprove = () => {
-    if (!isAdmin) {
-      setIsBatchAction(true);
-      setShowPasswordModal(true);
-      return;
+    if (isAdmin) {
+      onBatchUpdateStatus(selectedIds, '通过');
+      setSelectedIds([]);
     }
-    onBatchUpdateStatus(selectedIds, '通过');
-    setSelectedIds([]);
   };
 
   return (
@@ -162,7 +125,7 @@ export function Approval({
           />
         </div>
         <div className="flex items-center gap-3">
-          {selectedIds.length > 0 && (
+          {selectedIds.length > 0 && isAdmin && (
             <Button 
               variant="secondary" 
               onClick={handleBatchApprove}
@@ -171,20 +134,15 @@ export function Approval({
               <CheckCircle2 className="w-4 h-4" /> 批量通过 ({selectedIds.length})
             </Button>
           )}
-          <Button 
-            variant={isAdmin ? "outline" : "secondary"} 
-            onClick={() => isAdmin ? setIsAdmin(false) : setShowPasswordModal(true)}
-            className="flex items-center gap-2"
-          >
-            {isAdmin ? (
-              <><LogOut className="w-4 h-4" /> 退出登录</>
-            ) : (
-              <><LogIn className="w-4 h-4" /> 管理员登录</>
-            )}
-          </Button>
-          <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" /> 提交新审批
-          </Button>
+          {user ? (
+            <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" /> 提交新审批
+            </Button>
+          ) : (
+            <Button onClick={loginWithGoogle} className="flex items-center gap-2">
+              <LogIn className="w-4 h-4" /> 登录以提交审批
+            </Button>
+          )}
         </div>
       </div>
 
@@ -348,7 +306,7 @@ export function Approval({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {record.status === '待审批' && (
+                  {isAdmin && record.status === '待审批' && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleStatusClick(record.id, '通过')} className="text-green-600 hover:bg-green-50 border-green-200">
                         <CheckCircle2 className="w-4 h-4 mr-1.5" /> 通过
@@ -358,9 +316,11 @@ export function Approval({
                       </Button>
                     </>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => onDelete(record.id)} className="text-slate-400 hover:text-red-600">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button size="sm" variant="ghost" onClick={() => onDelete(record.id)} className="text-slate-400 hover:text-red-600">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -374,64 +334,7 @@ export function Approval({
         )}
       </div>
 
-      {/* Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200" title={pendingAction || isBatchAction ? "管理员审批确认" : "管理员登录"}>
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                {pendingAction || isBatchAction ? "请输入管理员密码以执行此操作：" : "请输入管理员密码以开启管理模式："}
-              </p>
-              <div className="space-y-2">
-                <input
-                  type="password"
-                  autoFocus
-                  className={cn(
-                    "w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 outline-none transition-all",
-                    passwordError ? "border-red-500 bg-red-50" : "border-slate-200"
-                  )}
-                  placeholder="请输入密码"
-                  value={passwordInput}
-                  onChange={(e) => {
-                    setPasswordInput(e.target.value);
-                    setPasswordError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') confirmPassword();
-                    if (e.key === 'Escape') setShowPasswordModal(false);
-                  }}
-                />
-                {passwordError && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {passwordError}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1" 
-                  onClick={() => {
-                    setShowPasswordModal(false);
-                    setPendingAction(null);
-                    setIsBatchAction(false);
-                    setPasswordInput('');
-                    setPasswordError('');
-                  }}
-                >
-                  取消
-                </Button>
-                <Button 
-                  className="flex-1" 
-                  onClick={confirmPassword}
-                >
-                  确认
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Removed Password Modal */}
     </div>
   );
 }

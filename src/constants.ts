@@ -169,5 +169,3 @@ export const mockLocalItems: LocalPlatformItem[] = [
   { id: 'miles1', name: 'SEM (Scanning Electron Microscopy / 扫描电镜)', platform: 'MILES', instrumentName: 'MILES SEM', hkuUserFee: '150 HKD/样', billingMethod: '按样', remarks: '外测服务' },
   { id: 'miles2', name: 'XRD (X-ray Diffraction / 物相分析)', platform: 'MILES', instrumentName: 'MILES XRD', hkuUserFee: '100 HKD/样', billingMethod: '按样', remarks: '外测服务' },
 ];
-
-export const CHECK_PASSWORD = 'hku_lab_admin'; // 默认管理员密码

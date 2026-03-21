@@ -18,11 +18,12 @@ interface OverviewProps {
   onAddProject: (project: TestProject) => void;
   onDeleteProject: (id: string) => void;
   onNavigateToRegistration: (projectName: string) => void;
+  isAdmin: boolean;
 }
 
 const columnHelper = createColumnHelper<TestProject>();
 
-export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject, onNavigateToRegistration }: OverviewProps) {
+export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject, onNavigateToRegistration, isAdmin }: OverviewProps) {
   const [globalFilter, setGlobalFilter] = useState('');
   const [localOnly, setLocalOnly] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<{ title: string; content: string } | null>(null);
@@ -118,21 +119,23 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
       header: '备注',
       cell: info => <span className="text-sm text-slate-500">{info.getValue()}</span>,
     }),
-    columnHelper.display({
-      id: 'actions',
-      header: '操作',
-      cell: info => (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setEditingProject(info.row.original)}
-          className="text-slate-400 hover:text-indigo-600"
-        >
-          <Edit2 size={16} />
-        </Button>
-      ),
-    }),
-  ], []);
+    ...(isAdmin ? [
+      columnHelper.display({
+        id: 'actions',
+        header: '操作',
+        cell: (info: any) => (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setEditingProject(info.row.original)}
+            className="text-slate-400 hover:text-indigo-600"
+          >
+            <Edit2 size={16} />
+          </Button>
+        ),
+      })
+    ] : []),
+  ], [isAdmin]);
 
   const filteredData = useMemo(() => {
     if (!localOnly) return data;
@@ -201,10 +204,12 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
             />
             <span className="text-sm text-slate-600 font-medium">仅显示本地可测</span>
           </label>
-          <Button onClick={() => { setIsAdding(true); setEditingProject({} as TestProject); }} className="gap-2">
-            <Plus size={18} />
-            <span>新增项目</span>
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => { setIsAdding(true); setEditingProject({} as TestProject); }} className="gap-2">
+              <Plus size={18} />
+              <span>新增项目</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -256,14 +261,16 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
                 >
                   {project.name}
                 </button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setEditingProject(project)}
-                  className="text-slate-400 p-1 h-auto"
-                >
-                  <Edit2 size={16} />
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingProject(project)}
+                    className="text-slate-400 p-1 h-auto"
+                  >
+                    <Edit2 size={16} />
+                  </Button>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-3 text-sm">

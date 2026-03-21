@@ -14,9 +14,25 @@ import {
   LocalPlatformItem, 
   RegistrationRecord, 
   ApprovalRecord,
-  ApprovalStatus
+  ApprovalStatus,
+  User
 } from './types';
 import { mockTestProjects, mockLocalItems } from './constants';
+import { auth, db, loginWithGoogle, logout, handleFirestoreError, OperationType } from './firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  updateDoc, 
+  query, 
+  where,
+  getDoc,
+  writeBatch
+} from 'firebase/firestore';
+import { LogIn, LogOut, User as UserIcon } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -29,91 +45,214 @@ export default function App() {
   const [localItems, setLocalItems] = useState<LocalPlatformItem[]>([]);
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [approvals, setApprovals] = useState<ApprovalRecord[]>([]);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load from LocalStorage
+  // Auth State Listener
   useEffect(() => {
-    const savedProjects = localStorage.getItem('testProjects_v5');
-    const savedLocal = localStorage.getItem('localItems_v5');
-    const savedRegistrations = localStorage.getItem('registrations_v5');
-    const savedApprovals = localStorage.getItem('approvals_v5');
-
-    setTestProjects(savedProjects ? JSON.parse(savedProjects) : mockTestProjects);
-    setLocalItems(savedLocal ? JSON.parse(savedLocal) : mockLocalItems);
-    setRegistrations(savedRegistrations ? JSON.parse(savedRegistrations) : []);
-    setApprovals(savedApprovals ? JSON.parse(savedApprovals) : []);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        // Check/Create user profile
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        try {
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const profile = userDoc.data() as User;
+            setUserProfile(profile);
+            setIsAdmin(profile.role === 'admin' || firebaseUser.email === 'zhiquanwei4@gmail.com');
+          } else {
+            const newProfile: User = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || '',
+              role: firebaseUser.email === 'zhiquanwei4@gmail.com' ? 'admin' : 'user'
+            };
+            await setDoc(userDocRef, newProfile);
+            setUserProfile(newProfile);
+            setIsAdmin(newProfile.role === 'admin');
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      } else {
+        setUserProfile(null);
+        setIsAdmin(false);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Save to LocalStorage
+  // Firestore Listeners
   useEffect(() => {
-    if (testProjects.length > 0) localStorage.setItem('testProjects_v5', JSON.stringify(testProjects));
-    if (localItems.length > 0) localStorage.setItem('localItems_v5', JSON.stringify(localItems));
-    localStorage.setItem('registrations_v5', JSON.stringify(registrations));
-    localStorage.setItem('approvals_v5', JSON.stringify(approvals));
-  }, [testProjects, localItems, registrations, approvals]);
+    const unsubProjects = onSnapshot(collection(db, 'testProjects'), (snapshot) => {
+      const projects = snapshot.docs.map(doc => doc.data() as TestProject);
+      setTestProjects(projects.length > 0 ? projects : mockTestProjects);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'testProjects'));
+
+    const unsubLocal = onSnapshot(collection(db, 'localItems'), (snapshot) => {
+      const items = snapshot.docs.map(doc => doc.data() as LocalPlatformItem);
+      setLocalItems(items.length > 0 ? items : mockLocalItems);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'localItems'));
+
+    return () => {
+      unsubProjects();
+      unsubLocal();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setRegistrations([]);
+      setApprovals([]);
+      return;
+    }
+
+    const qReg = query(collection(db, 'registrations'));
+    const qAppr = query(collection(db, 'approvals'));
+
+    const unsubReg = onSnapshot(qReg, (snapshot) => {
+      setRegistrations(snapshot.docs.map(doc => doc.data() as RegistrationRecord));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'registrations'));
+
+    const unsubAppr = onSnapshot(qAppr, (snapshot) => {
+      setApprovals(snapshot.docs.map(doc => doc.data() as ApprovalRecord));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'approvals'));
+
+    return () => {
+      unsubReg();
+      unsubAppr();
+    };
+  }, [user, isAdmin]);
 
   // Handlers
-  const handleAddRegistration = (record: RegistrationRecord) => {
-    setRegistrations([record, ...registrations]);
-  };
-
-  const handleDeleteRegistration = (id: string) => {
-    setRegistrations(registrations.filter(r => r.id !== id));
-  };
-
-  const handleAddApproval = (record: ApprovalRecord) => {
-    setApprovals([record, ...approvals]);
-  };
-
-  const handleDeleteApproval = (id: string) => {
-    setApprovals(approvals.filter(a => a.id !== id));
-  };
-
-  const handleUpdateApprovalStatus = (id: string, status: ApprovalStatus) => {
-    setApprovals(approvals.map(a => a.id === id ? { 
-      ...a, 
-      status, 
-      approvalDate: new Date().toISOString().split('T')[0] 
-    } : a));
-  };
-
-  const handleUpdateRegistrationStatus = (id: string, status: '待核对' | '已核对') => {
-    setRegistrations(registrations.map(r => r.id === id ? { ...r, status } : r));
-  };
-
-  const handleBatchUpdateRegistrationStatus = (ids: string[], status: '待核对' | '已核对') => {
-    setRegistrations(registrations.map(r => ids.includes(r.id) ? { ...r, status } : r));
-  };
-
-  const handleBatchUpdateApprovalStatus = (ids: string[], status: ApprovalStatus) => {
-    setApprovals(approvals.map(a => ids.includes(a.id) ? { 
-      ...a, 
-      status, 
-      approvalDate: new Date().toISOString().split('T')[0] 
-    } : a));
-  };
-
-  const handleResetData = () => {
-    if (window.confirm('确定要重置数据吗？这将清除所有手动添加的记录并恢复系统默认的仪器比价信息。')) {
-      localStorage.removeItem('testProjects_v5');
-      localStorage.removeItem('localItems_v5');
-      setTestProjects(mockTestProjects);
-      setLocalItems(mockLocalItems);
-      alert('数据已重置为系统默认值！');
+  const handleAddRegistration = async (record: RegistrationRecord) => {
+    if (!user) return;
+    const newRecord = { ...record, authorUid: user.uid };
+    try {
+      await setDoc(doc(db, 'registrations', newRecord.id), newRecord);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'registrations');
     }
   };
 
-  const handleUpdateProject = (updatedProject: TestProject) => {
-    const newData = testProjects.map(p => p.id === updatedProject.id ? updatedProject : p);
-    setTestProjects(newData);
+  const handleDeleteRegistration = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'registrations', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'registrations');
+    }
   };
 
-  const handleAddProject = (newProject: TestProject) => {
-    setTestProjects([newProject, ...testProjects]);
+  const handleAddApproval = async (record: ApprovalRecord) => {
+    if (!user) return;
+    const newRecord = { ...record, authorUid: user.uid };
+    try {
+      await setDoc(doc(db, 'approvals', newRecord.id), newRecord);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'approvals');
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    setTestProjects(testProjects.filter(p => p.id !== id));
+  const handleDeleteApproval = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'approvals', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'approvals');
+    }
+  };
+
+  const handleUpdateApprovalStatus = async (id: string, status: ApprovalStatus) => {
+    try {
+      await updateDoc(doc(db, 'approvals', id), { 
+        status, 
+        approvalDate: new Date().toISOString().split('T')[0] 
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'approvals');
+    }
+  };
+
+  const handleUpdateRegistrationStatus = async (id: string, status: '待核对' | '已核对') => {
+    try {
+      await updateDoc(doc(db, 'registrations', id), { status });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'registrations');
+    }
+  };
+
+  const handleBatchUpdateRegistrationStatus = async (ids: string[], status: '待核对' | '已核对') => {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+      batch.update(doc(db, 'registrations', id), { status });
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'registrations');
+    }
+  };
+
+  const handleBatchUpdateApprovalStatus = async (ids: string[], status: ApprovalStatus) => {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+      batch.update(doc(db, 'approvals', id), { 
+        status, 
+        approvalDate: new Date().toISOString().split('T')[0] 
+      });
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'approvals');
+    }
+  };
+
+  const handleResetData = async () => {
+    if (window.confirm('确定要重置数据吗？这将清除所有手动添加的记录并恢复系统默认的仪器比价信息。')) {
+      const batch = writeBatch(db);
+      // Delete existing projects and local items
+      testProjects.forEach(p => batch.delete(doc(db, 'testProjects', p.id)));
+      localItems.forEach(i => batch.delete(doc(db, 'localItems', i.id)));
+      
+      // Add mock data
+      mockTestProjects.forEach(p => batch.set(doc(db, 'testProjects', p.id), p));
+      mockLocalItems.forEach(i => batch.set(doc(db, 'localItems', i.id), i));
+      
+      try {
+        await batch.commit();
+        alert('数据已重置为系统默认值！');
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'reset');
+      }
+    }
+  };
+
+  const handleUpdateProject = async (updatedProject: TestProject) => {
+    try {
+      await setDoc(doc(db, 'testProjects', updatedProject.id), updatedProject);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'testProjects');
+    }
+  };
+
+  const handleAddProject = async (newProject: TestProject) => {
+    try {
+      await setDoc(doc(db, 'testProjects', newProject.id), newProject);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'testProjects');
+    }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'testProjects', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'testProjects');
+    }
   };
 
   // Excel Export
@@ -142,36 +281,49 @@ export default function App() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const bstr = evt.target?.result;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const sheetNames = wb.SheetNames;
       
+      const batch = writeBatch(db);
+
       if (sheetNames.includes("测试项目总览")) {
         const rawData = XLSX.utils.sheet_to_json(wb.Sheets["测试项目总览"]) as any[];
-        const importedProjects: TestProject[] = rawData.map((item, index) => ({
-          id: item.id || `imported-${Date.now()}-${index}`,
-          name: item.name || item['测试项目'] || '',
-          kuaiyicePrice: String(item.kuaiyicePrice || item['快易测价格'] || ''),
-          kuaiyiceDetail: item.kuaiyiceDetail || item['快易测详情'] || '',
-          compassPrice: String(item.compassPrice || item['科学指南针价格'] || ''),
-          compassDetail: item.compassDetail || item['科学指南针详情'] || '',
-          recommendation: item.recommendation || item['推荐外测选择'] || '',
-          hkuAvailable: item.hkuAvailable === true || item['港大'] === '有' || item['HKU'] === '有' || item['hkuAvailable'] === 'true',
-          cityuAvailable: item.cityuAvailable === true || item['城大'] === '有' || item['CityU'] === '有' || item['cityuAvailable'] === 'true',
-          milesAvailable: item.milesAvailable === true || item['MILES'] === '有' || item['milesAvailable'] === 'true',
-          mainlandAvailable: item.mainlandAvailable === true || item['内地'] === '有' || item['mainlandAvailable'] === 'true',
-          remarks: item.remarks || item['备注'] || '',
-        }));
-        setTestProjects([...importedProjects, ...testProjects]);
+        rawData.forEach((item, index) => {
+          const id = item.id || `imported-${Date.now()}-${index}`;
+          const project: TestProject = {
+            id,
+            name: item.name || item['测试项目'] || '',
+            kuaiyicePrice: String(item.kuaiyicePrice || item['快易测价格'] || ''),
+            kuaiyiceDetail: item.kuaiyiceDetail || item['快易测详情'] || '',
+            compassPrice: String(item.compassPrice || item['科学指南针价格'] || ''),
+            compassDetail: item.compassDetail || item['科学指南针详情'] || '',
+            recommendation: item.recommendation || item['推荐外测选择'] || '',
+            hkuAvailable: item.hkuAvailable === true || item['港大'] === '有' || item['HKU'] === '有' || item['hkuAvailable'] === 'true',
+            cityuAvailable: item.cityuAvailable === true || item['城大'] === '有' || item['CityU'] === '有' || item['cityuAvailable'] === 'true',
+            milesAvailable: item.milesAvailable === true || item['MILES'] === '有' || item['milesAvailable'] === 'true',
+            mainlandAvailable: item.mainlandAvailable === true || item['内地'] === '有' || item['mainlandAvailable'] === 'true',
+            remarks: item.remarks || item['备注'] || '',
+          };
+          batch.set(doc(db, 'testProjects', id), project);
+        });
       }
       
       if (sheetNames.includes("本地平台目录")) {
         const data = XLSX.utils.sheet_to_json(wb.Sheets["本地平台目录"]) as LocalPlatformItem[];
-        setLocalItems([...data, ...localItems]);
+        data.forEach((item, index) => {
+          const id = item.id || `local-${Date.now()}-${index}`;
+          batch.set(doc(db, 'localItems', id), { ...item, id });
+        });
       }
       
-      alert('导入成功！');
+      try {
+        await batch.commit();
+        alert('导入成功！');
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'import');
+      }
     };
     reader.readAsBinaryString(file);
   };
@@ -190,6 +342,7 @@ export default function App() {
           onAddProject={handleAddProject}
           onDeleteProject={handleDeleteProject}
           onNavigateToRegistration={handleNavigateToRegistration}
+          isAdmin={isAdmin}
         />
       );
       case 'local': return <LocalDirectory data={localItems} />;
@@ -202,7 +355,7 @@ export default function App() {
           onBatchUpdateStatus={handleBatchUpdateRegistrationStatus}
           onSwitchToApproval={() => setActiveTab('approval')}
           isAdmin={isAdmin}
-          setIsAdmin={setIsAdmin}
+          user={user}
           prefilledProject={prefilledProject}
           clearPrefill={() => setPrefilledProject(null)}
         />
@@ -215,7 +368,7 @@ export default function App() {
           onUpdateStatus={handleUpdateApprovalStatus}
           onBatchUpdateStatus={handleBatchUpdateApprovalStatus}
           isAdmin={isAdmin}
-          setIsAdmin={setIsAdmin}
+          user={user}
         />
       );
       case 'rules': return <Rules />;
@@ -226,6 +379,7 @@ export default function App() {
           onAddProject={handleAddProject}
           onDeleteProject={handleDeleteProject}
           onNavigateToRegistration={handleNavigateToRegistration}
+          isAdmin={isAdmin}
         />
       );
     }
@@ -279,6 +433,32 @@ export default function App() {
               <Menu className="w-6 h-6" />
             </Button>
             <h1 className="text-lg md:text-xl font-bold text-slate-900 truncate">{getTitle()}</h1>
+            <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200">
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                        <UserIcon className="w-4 h-4" />
+                      </div>
+                    )}
+                    <div className="hidden sm:block text-xs">
+                      <div className="font-medium text-slate-900">{user.displayName}</div>
+                      <div className="text-slate-500">{isAdmin ? '管理员' : '普通用户'}</div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={logout} className="text-slate-400 hover:text-red-600 p-1">
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" onClick={loginWithGoogle} className="flex items-center gap-2 text-xs">
+                  <LogIn className="w-4 h-4" /> 登录
+                </Button>
+              )}
+            </div>
             {activeTab === 'overview' && (
               <div className="hidden lg:flex items-center gap-4 ml-4 pl-4 border-l border-slate-200">
                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">

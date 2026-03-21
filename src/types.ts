@@ -48,6 +48,7 @@ export interface RegistrationRecord {
   totalPrice: number;
   status: '待核对' | '已核对';
   orderNumber: string;
+  authorUid: string;
 }
 
 export interface ApprovalRecord {
@@ -68,6 +69,14 @@ export interface ApprovalRecord {
   status: ApprovalStatus;
   approvalDate?: string;
   approvalRemarks?: string;
+  authorUid: string;
+}
+
+export interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: 'admin' | 'user';
 }
 
 // --- Schemas ---

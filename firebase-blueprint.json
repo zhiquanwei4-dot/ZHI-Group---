@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "TestProject": {
+      "title": "TestProject",
+      "description": "A test project with pricing and availability information.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "kuaiyicePrice": { "type": "string" },
+        "kuaiyiceDetail": { "type": "string" },
+        "compassPrice": { "type": "string" },
+        "compassDetail": { "type": "string" },
+        "recommendation": { "type": "string" },
+        "hkuAvailable": { "type": "boolean" },
+        "cityuAvailable": { "type": "boolean" },
+        "milesAvailable": { "type": "boolean" },
+        "mainlandAvailable": { "type": "boolean" },
+        "remarks": { "type": "string" }
+      },
+      "required": ["id", "name", "kuaiyicePrice", "compassPrice", "recommendation", "hkuAvailable", "cityuAvailable", "milesAvailable", "mainlandAvailable", "remarks"]
+    },
+    "LocalPlatformItem": {
+      "title": "LocalPlatformItem",
+      "description": "An instrument available on a local platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "platform": { "type": "string", "enum": ["ME", "CHEM", "生命科学系", "UCF", "MILES"] },
+        "instrumentName": { "type": "string" },
+        "hkuUserFee": { "type": "string" },
+        "billingMethod": { "type": "string" },
+        "remarks": { "type": "string" }
+      },
+      "required": ["id", "name", "platform", "instrumentName", "hkuUserFee", "billingMethod", "remarks"]
+    },
+    "RegistrationRecord": {
+      "title": "RegistrationRecord",
+      "description": "A record of a sample submission registration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "applicant": { "type": "string" },
+        "region": { "type": "string", "enum": ["HKU", "MILES", "内地"] },
+        "sampleName": { "type": "string" },
+        "testProject": { "type": "string" },
+        "sampleCount": { "type": "number" },
+        "checkedPlatforms": { "type": "string" },
+        "reason": { "type": "string" },
+        "institution": { "type": "string", "enum": ["快易测", "科学指南针"] },
+        "quoteType": { "type": "string", "enum": ["按样", "按小时", "按次", "其他"] },
+        "unitPrice": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "status": { "type": "string", "enum": ["待核对", "已核对"] },
+        "orderNumber": { "type": "string" },
+        "authorUid": { "type": "string" }
+      },
+      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "sampleCount", "checkedPlatforms", "reason", "institution", "quoteType", "unitPrice", "totalPrice", "status", "authorUid"]
+    },
+    "ApprovalRecord": {
+      "title": "ApprovalRecord",
+      "description": "A record of a test approval request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "applicant": { "type": "string" },
+        "region": { "type": "string", "enum": ["HKU", "MILES", "内地"] },
+        "sampleName": { "type": "string" },
+        "testProject": { "type": "string" },
+        "institution": { "type": "string", "enum": ["快易测", "科学指南针"] },
+        "quoteType": { "type": "string", "enum": ["按样", "按小时", "按次", "其他"] },
+        "unitPrice": { "type": "number" },
+        "sampleCount": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "corePurpose": { "type": "string" },
+        "reasonForExternal": { "type": "string" },
+        "quoteLink": { "type": "string" },
+        "status": { "type": "string", "enum": ["待审批", "通过", "驳回", "无需审批"] },
+        "approvalDate": { "type": "string", "format": "date" },
+        "approvalRemarks": { "type": "string" },
+        "authorUid": { "type": "string" }
+      },
+      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "institution", "quoteType", "unitPrice", "sampleCount", "totalPrice", "corePurpose", "reasonForExternal", "status", "authorUid"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and role information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "testProjects": {
+      "schema": "TestProject",
+      "description": "Collection of test projects."
+    },
+    "localItems": {
+      "schema": "LocalPlatformItem",
+      "description": "Collection of local platform instruments."
+    },
+    "registrations": {
+      "schema": "RegistrationRecord",
+      "description": "Collection of sample submission registrations."
+    },
+    "approvals": {
+      "schema": "ApprovalRecord",
+      "description": "Collection of test approval requests."
+    },
+    "users": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    }
+  }
+}

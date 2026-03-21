@@ -5,8 +5,8 @@ import { Plus, AlertCircle, Info, Trash2, Search } from 'lucide-react';
 import { RegistrationRecord, registrationSchema, Region, QuoteType } from '../types';
 import { Card, Button, Badge } from './UI';
 import { cn, formatCurrency, getStatusColor } from '../lib/utils';
-import { CHECK_PASSWORD } from '../constants';
-import { LogIn, LogOut, CheckSquare, Square } from 'lucide-react';
+import { CheckSquare, Square, LogIn } from 'lucide-react';
+import { loginWithGoogle } from '../firebase';
 
 interface RegistrationProps {
   data: RegistrationRecord[];
@@ -16,7 +16,7 @@ interface RegistrationProps {
   onBatchUpdateStatus: (ids: string[], status: '待核对' | '已核对') => void;
   onSwitchToApproval: () => void;
   isAdmin: boolean;
-  setIsAdmin: (isAdmin: boolean) => void;
+  user: any;
   prefilledProject?: string | null;
   clearPrefill?: () => void;
 }
@@ -29,7 +29,7 @@ export function Registration({
   onBatchUpdateStatus,
   onSwitchToApproval,
   isAdmin,
-  setIsAdmin,
+  user,
   prefilledProject,
   clearPrefill
 }: RegistrationProps) {
@@ -38,12 +38,6 @@ export function Registration({
   
   // Selection State
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-  
-  // Password Modal State
-  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
-  const [passwordInput, setPasswordInput] = React.useState('');
-  const [passwordError, setPasswordError] = React.useState('');
-  const [pendingAction, setPendingAction] = React.useState<{ id: string, currentStatus: '待核对' | '已核对' } | null>(null);
 
   const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(registrationSchema),
@@ -100,28 +94,6 @@ export function Registration({
   const handleStatusClick = (id: string, currentStatus: '待核对' | '已核对') => {
     if (isAdmin) {
       onUpdateStatus(id, currentStatus === '待核对' ? '已核对' : '待核对');
-      return;
-    }
-    setPendingAction({ id, currentStatus });
-    setShowPasswordModal(true);
-    setPasswordInput('');
-    setPasswordError('');
-  };
-
-  const confirmPassword = () => {
-    if (passwordInput === CHECK_PASSWORD) {
-      if (pendingAction) {
-        onUpdateStatus(pendingAction.id, pendingAction.currentStatus === '待核对' ? '已核对' : '待核对');
-      } else {
-        // This was a login action
-        setIsAdmin(true);
-      }
-      setShowPasswordModal(false);
-      setPendingAction(null);
-      setPasswordInput('');
-      setPasswordError('');
-    } else {
-      setPasswordError('密码错误，请重试');
     }
   };
 
@@ -140,12 +112,10 @@ export function Registration({
   };
 
   const handleBatchCheck = () => {
-    if (!isAdmin) {
-      setShowPasswordModal(true);
-      return;
+    if (isAdmin) {
+      onBatchUpdateStatus(selectedIds, '已核对');
+      setSelectedIds([]);
     }
-    onBatchUpdateStatus(selectedIds, '已核对');
-    setSelectedIds([]);
   };
 
   return (
@@ -174,7 +144,7 @@ export function Registration({
           />
         </div>
         <div className="flex items-center gap-3">
-          {selectedIds.length > 0 && (
+          {selectedIds.length > 0 && isAdmin && (
             <Button 
               variant="secondary" 
               onClick={handleBatchCheck}
@@ -183,20 +153,15 @@ export function Registration({
               <CheckSquare className="w-4 h-4" /> 批量核对 ({selectedIds.length})
             </Button>
           )}
-          <Button 
-            variant={isAdmin ? "outline" : "secondary"} 
-            onClick={() => isAdmin ? setIsAdmin(false) : setShowPasswordModal(true)}
-            className="flex items-center gap-2"
-          >
-            {isAdmin ? (
-              <><LogOut className="w-4 h-4" /> 退出登录</>
-            ) : (
-              <><LogIn className="w-4 h-4" /> 管理员登录</>
-            )}
-          </Button>
-          <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" /> 新增登记
-          </Button>
+          {user ? (
+            <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" /> 新增登记
+            </Button>
+          ) : (
+            <Button onClick={loginWithGoogle} className="flex items-center gap-2">
+              <LogIn className="w-4 h-4" /> 登录以登记
+            </Button>
+          )}
         </div>
       </div>
 
@@ -349,23 +314,25 @@ export function Registration({
                   </td>
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{formatCurrency(record.totalPrice)}</td>
                   <td className="px-6 py-4 text-sm">
-                    <button 
-                      onClick={() => handleStatusClick(record.id, record.status)}
-                      className="focus:outline-none"
-                      title="点击切换核对状态 (需密码)"
-                    >
-                      <Badge className={cn(getStatusColor(record.status), "cursor-pointer hover:opacity-80 transition-opacity")}>
-                        {record.status}
-                      </Badge>
-                    </button>
+                  <button 
+                    onClick={() => handleStatusClick(record.id, record.status)}
+                    className={cn("focus:outline-none", !isAdmin && "cursor-default")}
+                    title={isAdmin ? "点击切换核对状态" : ""}
+                  >
+                    <Badge className={cn(getStatusColor(record.status), isAdmin && "cursor-pointer hover:opacity-80 transition-opacity")}>
+                      {record.status}
+                    </Badge>
+                  </button>
                   </td>
                   <td className="px-6 py-4 text-sm">
+                  {isAdmin && (
                     <button 
                       onClick={() => onDelete(record.id)}
                       className="text-red-400 hover:text-red-600 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                  )}
                   </td>
                 </tr>
               ))}
@@ -416,18 +383,20 @@ export function Registration({
               <div className="flex items-center justify-between pt-2">
                 <button 
                   onClick={() => handleStatusClick(record.id, record.status)}
-                  className="focus:outline-none"
+                  className={cn("focus:outline-none", !isAdmin && "cursor-default")}
                 >
                   <Badge className={cn(getStatusColor(record.status), "text-[10px]")}>
                     {record.status}
                   </Badge>
                 </button>
-                <button 
-                  onClick={() => onDelete(record.id)}
-                  className="text-red-400 p-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {isAdmin && (
+                  <button 
+                    onClick={() => onDelete(record.id)}
+                    className="text-red-400 p-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -439,63 +408,7 @@ export function Registration({
         </div>
       </Card>
 
-      {/* Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200" title={pendingAction ? "管理员核对确认" : "管理员登录"}>
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                {pendingAction ? "请输入管理员密码以执行此操作：" : "请输入管理员密码以开启管理模式："}
-              </p>
-              <div className="space-y-2">
-                <input
-                  type="password"
-                  autoFocus
-                  className={cn(
-                    "w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 outline-none transition-all",
-                    passwordError ? "border-red-500 bg-red-50" : "border-slate-200"
-                  )}
-                  placeholder="请输入密码"
-                  value={passwordInput}
-                  onChange={(e) => {
-                    setPasswordInput(e.target.value);
-                    setPasswordError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') confirmPassword();
-                    if (e.key === 'Escape') setShowPasswordModal(false);
-                  }}
-                />
-                {passwordError && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {passwordError}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1" 
-                  onClick={() => {
-                    setShowPasswordModal(false);
-                    setPendingAction(null);
-                    setPasswordInput('');
-                    setPasswordError('');
-                  }}
-                >
-                  取消
-                </Button>
-                <Button 
-                  className="flex-1" 
-                  onClick={confirmPassword}
-                >
-                  确认
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Removed Password Modal */}
     </div>
   );
 }
