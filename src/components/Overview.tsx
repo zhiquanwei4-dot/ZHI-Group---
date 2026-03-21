@@ -17,11 +17,12 @@ interface OverviewProps {
   onUpdateProject: (project: TestProject) => void;
   onAddProject: (project: TestProject) => void;
   onDeleteProject: (id: string) => void;
+  onNavigateToRegistration: (projectName: string) => void;
 }
 
 const columnHelper = createColumnHelper<TestProject>();
 
-export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject }: OverviewProps) {
+export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject, onNavigateToRegistration }: OverviewProps) {
   const [globalFilter, setGlobalFilter] = useState('');
   const [localOnly, setLocalOnly] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<{ title: string; content: string } | null>(null);
@@ -31,7 +32,15 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject 
   const columns = useMemo(() => [
     columnHelper.accessor('name', {
       header: '测试项目',
-      cell: info => <span className="font-medium text-slate-900">{info.getValue()}</span>,
+      cell: info => (
+        <button 
+          onClick={() => onNavigateToRegistration(info.getValue())}
+          className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left transition-colors"
+          title="点击去送样登记"
+        >
+          {info.getValue()}
+        </button>
+      ),
     }),
     columnHelper.accessor('kuaiyicePrice', {
       header: '快易测价格',
@@ -240,7 +249,13 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject 
           {filteredData.map(project => (
             <div key={project.id} className="p-4 space-y-4">
               <div className="flex items-start justify-between gap-2">
-                <h4 className="font-bold text-slate-900">{project.name}</h4>
+                <button 
+                  onClick={() => onNavigateToRegistration(project.name)}
+                  className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline text-left transition-colors"
+                  title="点击去送样登记"
+                >
+                  {project.name}
+                </button>
                 <Button 
                   variant="ghost" 
                   size="sm" 

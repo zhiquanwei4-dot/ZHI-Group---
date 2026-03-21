@@ -22,6 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [collapsed, setCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [prefilledProject, setPrefilledProject] = useState<string | null>(null);
 
   // State
   const [testProjects, setTestProjects] = useState<TestProject[]>([]);
@@ -175,6 +176,11 @@ export default function App() {
     reader.readAsBinaryString(file);
   };
 
+  const handleNavigateToRegistration = (projectName: string) => {
+    setPrefilledProject(projectName);
+    setActiveTab('registration');
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': return (
@@ -183,6 +189,7 @@ export default function App() {
           onUpdateProject={handleUpdateProject}
           onAddProject={handleAddProject}
           onDeleteProject={handleDeleteProject}
+          onNavigateToRegistration={handleNavigateToRegistration}
         />
       );
       case 'local': return <LocalDirectory data={localItems} />;
@@ -196,6 +203,8 @@ export default function App() {
           onSwitchToApproval={() => setActiveTab('approval')}
           isAdmin={isAdmin}
           setIsAdmin={setIsAdmin}
+          prefilledProject={prefilledProject}
+          clearPrefill={() => setPrefilledProject(null)}
         />
       );
       case 'approval': return (
@@ -216,6 +225,7 @@ export default function App() {
           onUpdateProject={handleUpdateProject}
           onAddProject={handleAddProject}
           onDeleteProject={handleDeleteProject}
+          onNavigateToRegistration={handleNavigateToRegistration}
         />
       );
     }

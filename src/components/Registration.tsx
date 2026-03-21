@@ -17,6 +17,8 @@ interface RegistrationProps {
   onSwitchToApproval: () => void;
   isAdmin: boolean;
   setIsAdmin: (isAdmin: boolean) => void;
+  prefilledProject?: string | null;
+  clearPrefill?: () => void;
 }
 
 export function Registration({ 
@@ -27,21 +29,23 @@ export function Registration({
   onBatchUpdateStatus,
   onSwitchToApproval,
   isAdmin,
-  setIsAdmin
+  setIsAdmin,
+  prefilledProject,
+  clearPrefill
 }: RegistrationProps) {
-  const [isAdding, setIsAdding] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isAdding, setIsAdding] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
   
   // Selection State
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   
   // Password Modal State
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [pendingAction, setPendingAction] = useState<{ id: string, currentStatus: '待核对' | '已核对' } | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
+  const [passwordInput, setPasswordInput] = React.useState('');
+  const [passwordError, setPasswordError] = React.useState('');
+  const [pendingAction, setPendingAction] = React.useState<{ id: string, currentStatus: '待核对' | '已核对' } | null>(null);
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       applicant: '',
@@ -57,6 +61,15 @@ export function Registration({
       orderNumber: '',
     }
   });
+
+  // Handle pre-filled project
+  React.useEffect(() => {
+    if (prefilledProject) {
+      setIsAdding(true);
+      setValue('testProject', prefilledProject);
+      if (clearPrefill) clearPrefill();
+    }
+  }, [prefilledProject, setValue, clearPrefill]);
 
   const unitPrice = watch('unitPrice') || 0;
   const sampleCount = watch('sampleCount') || 1;
