@@ -43,7 +43,7 @@ export function Approval({
     resolver: zodResolver(approvalSchema),
     defaultValues: {
       applicant: '',
-      region: '香港' as Region,
+      region: 'HKU' as Region,
       sampleName: '',
       testProject: '',
       institution: '快易测' as const,
@@ -200,7 +200,7 @@ export function Approval({
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">所属地区</label>
                 <select {...register('region')} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none">
-                  <option value="香港">香港</option>
+                  <option value="HKU">HKU</option>
                   <option value="MILES">MILES</option>
                   <option value="内地">内地</option>
                 </select>

@@ -83,7 +83,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
       cell: info => <Badge className="bg-indigo-50 text-indigo-700 border-indigo-100">{info.getValue()}</Badge>,
     }),
     columnHelper.accessor('hkuAvailable', {
-      header: '港大',
+      header: 'HKU',
       cell: info => info.getValue() ? (
         <div className="w-8 h-8 rounded bg-[#FEF9C3] flex items-center justify-center border border-[#FDE047] mx-auto">
           <Check className="w-4 h-4 text-[#854D0E]" />
@@ -91,7 +91,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
       ) : <X className="w-4 h-4 text-slate-300 mx-auto" />,
     }),
     columnHelper.accessor('cityuAvailable', {
-      header: '城大',
+      header: 'CityU',
       cell: info => info.getValue() ? (
         <div className="w-8 h-8 rounded bg-[#FCE7F3] flex items-center justify-center border border-[#F9A8D4] mx-auto">
           <Check className="w-4 h-4 text-[#9D174D]" />
@@ -315,25 +315,6 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
           )}
         </div>
       </Card>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-4 h-4 rounded bg-[#FEF9C3] border border-[#FDE047]"></div>
-          <span>港大 (米黄色)</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-4 h-4 rounded bg-[#FCE7F3] border border-[#F9A8D4]"></div>
-          <span>城大 (浅粉色)</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-4 h-4 rounded bg-[#DBEAFE] border border-[#93C5FD]"></div>
-          <span>MILES (浅蓝色)</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-4 h-4 rounded bg-[#CCFBF1] border border-[#5EEAD4]"></div>
-          <span>内地 (浅青色)</span>
-        </div>
-      </div>
 
       {/* Detail Modal */}
       {selectedDetail && (

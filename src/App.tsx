@@ -157,8 +157,8 @@ export default function App() {
           compassPrice: String(item.compassPrice || item['科学指南针价格'] || ''),
           compassDetail: item.compassDetail || item['科学指南针详情'] || '',
           recommendation: item.recommendation || item['推荐外测选择'] || '',
-          hkuAvailable: item.hkuAvailable === true || item['港大'] === '有' || item['hkuAvailable'] === 'true',
-          cityuAvailable: item.cityuAvailable === true || item['城大'] === '有' || item['cityuAvailable'] === 'true',
+          hkuAvailable: item.hkuAvailable === true || item['港大'] === '有' || item['HKU'] === '有' || item['hkuAvailable'] === 'true',
+          cityuAvailable: item.cityuAvailable === true || item['城大'] === '有' || item['CityU'] === '有' || item['cityuAvailable'] === 'true',
           milesAvailable: item.milesAvailable === true || item['MILES'] === '有' || item['milesAvailable'] === 'true',
           mainlandAvailable: item.mainlandAvailable === true || item['内地'] === '有' || item['mainlandAvailable'] === 'true',
           remarks: item.remarks || item['备注'] || '',
@@ -279,6 +279,26 @@ export default function App() {
               <Menu className="w-6 h-6" />
             </Button>
             <h1 className="text-lg md:text-xl font-bold text-slate-900 truncate">{getTitle()}</h1>
+            {activeTab === 'overview' && (
+              <div className="hidden lg:flex items-center gap-4 ml-4 pl-4 border-l border-slate-200">
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                  <div className="w-3 h-3 rounded bg-[#FEF9C3] border border-[#FDE047]"></div>
+                  <span>HKU</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                  <div className="w-3 h-3 rounded bg-[#FCE7F3] border border-[#F9A8D4]"></div>
+                  <span>CityU</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                  <div className="w-3 h-3 rounded bg-[#DBEAFE] border border-[#93C5FD]"></div>
+                  <span>MILES</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                  <div className="w-3 h-3 rounded bg-[#CCFBF1] border border-[#5EEAD4]"></div>
+                  <span>内地</span>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2 md:gap-3">
             <Button variant="ghost" size="sm" onClick={handleResetData} className="text-slate-400 hover:text-amber-600 flex items-center gap-2 text-xs md:text-sm">
@@ -298,6 +318,26 @@ export default function App() {
         </header>
 
         <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
+          {activeTab === 'overview' && (
+            <div className="lg:hidden flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                <div className="w-3 h-3 rounded bg-[#FEF9C3] border border-[#FDE047]"></div>
+                <span>HKU</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                <div className="w-3 h-3 rounded bg-[#FCE7F3] border border-[#F9A8D4]"></div>
+                <span>CityU</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                <div className="w-3 h-3 rounded bg-[#DBEAFE] border border-[#93C5FD]"></div>
+                <span>MILES</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                <div className="w-3 h-3 rounded bg-[#CCFBF1] border border-[#5EEAD4]"></div>
+                <span>内地</span>
+              </div>
+            </div>
+          )}
           <div className="w-full overflow-x-auto">
             {renderContent()}
           </div>

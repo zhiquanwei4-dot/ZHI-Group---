@@ -3,7 +3,7 @@ import { z } from 'zod';
 // --- Types ---
 
 export type Platform = 'ME' | 'CHEM' | '生命科学系' | 'UCF' | 'MILES';
-export type Region = '香港' | 'MILES' | '内地';
+export type Region = 'HKU' | 'MILES' | '内地';
 export type QuoteType = '按样' | '按小时' | '按次' | '其他';
 export type ApprovalStatus = '待审批' | '通过' | '驳回' | '无需审批';
 
@@ -74,7 +74,7 @@ export interface ApprovalRecord {
 
 export const registrationSchema = z.object({
   applicant: z.string().min(1, '请输入申请人'),
-  region: z.enum(['香港', 'MILES', '内地']),
+  region: z.enum(['HKU', 'MILES', '内地']),
   sampleName: z.string().min(1, '请输入样品名称'),
   testProject: z.string().min(1, '请输入测试项目'),
   sampleCount: z.number().min(1, '数量至少为1'),
@@ -88,7 +88,7 @@ export const registrationSchema = z.object({
 
 export const approvalSchema = z.object({
   applicant: z.string().min(1, '请输入申请人'),
-  region: z.enum(['香港', 'MILES', '内地']),
+  region: z.enum(['HKU', 'MILES', '内地']),
   sampleName: z.string().min(1, '请输入样品名称'),
   testProject: z.string().min(1, '请输入测试项目'),
   institution: z.enum(['快易测', '科学指南针']),
