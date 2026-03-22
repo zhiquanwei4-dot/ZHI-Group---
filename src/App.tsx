@@ -35,7 +35,7 @@ import {
 import { LogIn, LogOut, User as UserIcon } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('rules');
   const [collapsed, setCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [prefilledProject, setPrefilledProject] = useState<string | null>(null);

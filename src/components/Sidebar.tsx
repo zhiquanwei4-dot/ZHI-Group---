@@ -19,11 +19,11 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { id: 'rules', label: '规则说明', icon: Info },
   { id: 'overview', label: '测试项目总览', icon: LayoutDashboard },
   { id: 'local', label: '本地平台目录', icon: Building2 },
   { id: 'registration', label: '机构送样登记', icon: ClipboardCheck },
   { id: 'approval', label: '机构测试审批', icon: FileText },
-  { id: 'rules', label: '规则说明', icon: Info },
 ];
 
 export function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed }: SidebarProps) {
