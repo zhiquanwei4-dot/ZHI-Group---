@@ -48,7 +48,7 @@ export interface RegistrationRecord {
   totalPrice: number;
   status: '待核对' | '已核对';
   orderNumber: string;
-  authorUid: string;
+  authorUid?: string;
 }
 
 export interface ApprovalRecord {
@@ -69,7 +69,7 @@ export interface ApprovalRecord {
   status: ApprovalStatus;
   approvalDate?: string;
   approvalRemarks?: string;
-  authorUid: string;
+  authorUid?: string;
 }
 
 export interface User {
@@ -93,6 +93,7 @@ export const registrationSchema = z.object({
   quoteType: z.enum(['按样', '按小时', '按次', '其他']),
   unitPrice: z.number().min(0, '单价不能为负'),
   orderNumber: z.string().optional(),
+  status: z.enum(['待核对', '已核对']).optional(),
 });
 
 export const approvalSchema = z.object({
@@ -107,4 +108,6 @@ export const approvalSchema = z.object({
   corePurpose: z.string().min(1, '请输入核心目的'),
   reasonForExternal: z.string().min(1, '请输入外测原因'),
   quoteLink: z.string().optional(),
+  status: z.enum(['待审批', '通过', '驳回', '无需审批']).optional(),
+  approvalRemarks: z.string().optional(),
 });

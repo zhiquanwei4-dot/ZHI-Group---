@@ -37,8 +37,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "zhiquanwei4@gmail.com" && request.auth.token.email_verified == true));
+        (
+          (request.auth.token.email == "zhiquanwei4@gmail.com") ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
     }
 
     function hasRequiredFields(fields) {
@@ -75,22 +78,24 @@ service cloud.firestore {
     }
 
     function isValidRegistration(data) {
-      return hasRequiredFields(['id', 'date', 'applicant', 'region', 'sampleName', 'testProject', 'sampleCount', 'checkedPlatforms', 'reason', 'institution', 'quoteType', 'unitPrice', 'totalPrice', 'status', 'authorUid']) &&
+      return hasRequiredFields(['id', 'date', 'applicant', 'region', 'sampleName', 'testProject', 'sampleCount', 'checkedPlatforms', 'reason', 'institution', 'quoteType', 'unitPrice', 'totalPrice', 'status']) &&
              data.id is string && isValidDateString(data.date) && data.applicant is string &&
              data.region in ['HKU', 'MILES', '内地'] && data.sampleName is string && data.testProject is string &&
              data.sampleCount is number && data.sampleCount > 0 &&
              data.institution in ['快易测', '科学指南针'] && data.quoteType in ['按样', '按小时', '按次', '其他'] &&
              data.unitPrice is number && data.totalPrice is number &&
-             data.status in ['待核对', '已核对'] && data.authorUid is string;
+             data.status in ['待核对', '已核对'] &&
+             (!('authorUid' in data) || data.authorUid is string);
     }
 
     function isValidApproval(data) {
-      return hasRequiredFields(['id', 'date', 'applicant', 'region', 'sampleName', 'testProject', 'institution', 'quoteType', 'unitPrice', 'sampleCount', 'totalPrice', 'corePurpose', 'reasonForExternal', 'status', 'authorUid']) &&
+      return hasRequiredFields(['id', 'date', 'applicant', 'region', 'sampleName', 'testProject', 'institution', 'quoteType', 'unitPrice', 'sampleCount', 'totalPrice', 'corePurpose', 'reasonForExternal', 'status']) &&
              data.id is string && isValidDateString(data.date) && data.applicant is string &&
              data.region in ['HKU', 'MILES', '内地'] && data.sampleName is string && data.testProject is string &&
              data.institution in ['快易测', '科学指南针'] && data.quoteType in ['按样', '按小时', '按次', '其他'] &&
              data.unitPrice is number && data.sampleCount is number && data.totalPrice is number &&
-             data.status in ['待审批', '通过', '驳回', '无需审批'] && data.authorUid is string;
+             data.status in ['待审批', '通过', '驳回', '无需审批'] &&
+             (!('authorUid' in data) || data.authorUid is string);
     }
 
     function isValidUser(data) {
@@ -116,30 +121,29 @@ service cloud.firestore {
     }
 
     match /registrations/{regId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidRegistration(request.resource.data) && request.resource.data.authorUid == request.auth.uid;
-      allow update: if isAuthenticated() && (
-        (isOwner(resource.data.authorUid) && isValidRegistration(request.resource.data) && request.resource.data.authorUid == resource.data.authorUid && request.resource.data.status == resource.data.status) ||
-        (isAdmin() && isValidRegistration(request.resource.data))
-      );
+      allow read: if true;
+      allow create: if isValidRegistration(request.resource.data);
+      allow update: if (isAdmin() && isValidRegistration(request.resource.data)) ||
+        (isValidRegistration(request.resource.data) && 
+         request.resource.data.status == resource.data.status &&
+         (!('authorUid' in resource.data) || request.resource.data.authorUid == resource.data.authorUid));
       allow delete: if isAdmin();
     }
 
     match /approvals/{apprId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidApproval(request.resource.data) && request.resource.data.authorUid == request.auth.uid;
-      allow update: if isAuthenticated() && (
-        (isOwner(resource.data.authorUid) && isValidApproval(request.resource.data) && request.resource.data.authorUid == resource.data.authorUid && request.resource.data.status == resource.data.status) ||
-        (isAdmin() && isValidApproval(request.resource.data))
-      );
+      allow read: if true;
+      allow create: if isValidApproval(request.resource.data);
+      allow update: if (isAdmin() && isValidApproval(request.resource.data)) ||
+        (isValidApproval(request.resource.data) && 
+         request.resource.data.status == resource.data.status &&
+         (!('authorUid' in resource.data) || request.resource.data.authorUid == resource.data.authorUid));
       allow delete: if isAdmin();
     }
 
     match /users/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
-      allow update: if isAdmin() && isValidUser(request.resource.data);
-      allow delete: if isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update, delete: if isAdmin();
     }
   }
 }

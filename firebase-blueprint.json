@@ -57,7 +57,7 @@
         "orderNumber": { "type": "string" },
         "authorUid": { "type": "string" }
       },
-      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "sampleCount", "checkedPlatforms", "reason", "institution", "quoteType", "unitPrice", "totalPrice", "status", "authorUid"]
+      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "sampleCount", "checkedPlatforms", "reason", "institution", "quoteType", "unitPrice", "totalPrice", "status"]
     },
     "ApprovalRecord": {
       "title": "ApprovalRecord",
@@ -83,7 +83,7 @@
         "approvalRemarks": { "type": "string" },
         "authorUid": { "type": "string" }
       },
-      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "institution", "quoteType", "unitPrice", "sampleCount", "totalPrice", "corePurpose", "reasonForExternal", "status", "authorUid"]
+      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "institution", "quoteType", "unitPrice", "sampleCount", "totalPrice", "corePurpose", "reasonForExternal", "status"]
     },
     "User": {
       "title": "User",

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, AlertCircle, Info, Trash2, Search } from 'lucide-react';
+import { Plus, AlertCircle, Info, Trash2, Search, Edit } from 'lucide-react';
 import { RegistrationRecord, registrationSchema, Region, QuoteType } from '../types';
 import { Card, Button, Badge } from './UI';
 import { cn, formatCurrency, getStatusColor } from '../lib/utils';
@@ -11,6 +11,7 @@ import { loginWithGoogle } from '../firebase';
 interface RegistrationProps {
   data: RegistrationRecord[];
   onAdd: (record: RegistrationRecord) => void;
+  onUpdate: (record: RegistrationRecord) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: '待核对' | '已核对') => void;
   onBatchUpdateStatus: (ids: string[], status: '待核对' | '已核对') => void;
@@ -24,6 +25,7 @@ interface RegistrationProps {
 export function Registration({ 
   data, 
   onAdd, 
+  onUpdate,
   onDelete, 
   onUpdateStatus, 
   onBatchUpdateStatus,
@@ -34,6 +36,7 @@ export function Registration({
   clearPrefill
 }: RegistrationProps) {
   const [isAdding, setIsAdding] = React.useState(false);
+  const [editingRecord, setEditingRecord] = React.useState<RegistrationRecord | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   
   // Selection State
@@ -53,6 +56,7 @@ export function Registration({
       quoteType: '按样' as QuoteType,
       unitPrice: 0,
       orderNumber: '',
+      status: '待核对' as const,
     }
   });
 
@@ -73,16 +77,45 @@ export function Registration({
   const onSubmit = (formData: any) => {
     if (needsApproval) return;
     
-    const newRecord: RegistrationRecord = {
-      ...formData,
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString().split('T')[0],
-      totalPrice,
-      status: '待核对',
-    };
-    onAdd(newRecord);
+    if (editingRecord) {
+      const updatedRecord: RegistrationRecord = {
+        ...editingRecord,
+        ...formData,
+        totalPrice,
+      };
+      onUpdate(updatedRecord);
+    } else {
+      const newRecord: RegistrationRecord = {
+        ...formData,
+        id: Math.random().toString(36).substr(2, 9),
+        date: new Date().toISOString().split('T')[0],
+        totalPrice,
+        status: '待核对',
+      };
+      onAdd(newRecord);
+    }
     setIsAdding(false);
+    setEditingRecord(null);
     reset();
+  };
+
+  const handleEdit = (record: RegistrationRecord) => {
+    setEditingRecord(record);
+    setIsAdding(true);
+    reset({
+      applicant: record.applicant,
+      region: record.region,
+      sampleName: record.sampleName,
+      testProject: record.testProject,
+      sampleCount: record.sampleCount,
+      checkedPlatforms: record.checkedPlatforms,
+      reason: record.reason,
+      institution: record.institution,
+      quoteType: record.quoteType,
+      unitPrice: record.unitPrice,
+      orderNumber: record.orderNumber,
+      status: record.status,
+    });
   };
 
   const filteredData = data.filter(item => 
@@ -153,20 +186,19 @@ export function Registration({
               <CheckSquare className="w-4 h-4" /> 批量核对 ({selectedIds.length})
             </Button>
           )}
-          {user ? (
-            <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 新增登记
-            </Button>
-          ) : (
-            <Button onClick={loginWithGoogle} className="flex items-center gap-2">
-              <LogIn className="w-4 h-4" /> 登录以登记
+          <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" /> 新增登记
+          </Button>
+          {!user && (
+            <Button variant="ghost" onClick={loginWithGoogle} className="flex items-center gap-2 text-slate-500">
+              <LogIn className="w-4 h-4" /> 管理员登录
             </Button>
           )}
         </div>
       </div>
 
       {isAdding && (
-        <Card title="新增机构送样登记" className="border-indigo-200 ring-1 ring-indigo-100">
+        <Card title={editingRecord ? "编辑送样登记" : "新增机构送样登记"} className="border-indigo-200 ring-1 ring-indigo-100">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-1">
@@ -222,6 +254,15 @@ export function Registration({
                 <label className="text-sm font-medium text-slate-700">平台订单号 (可选)</label>
                 <input {...register('orderNumber')} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" />
               </div>
+              {isAdmin && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700">核对状态</label>
+                  <select {...register('status')} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="待核对">待核对</option>
+                    <option value="已核对">已核对</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -251,11 +292,15 @@ export function Registration({
                 )}
               </div>
               <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsAdding(false)}>取消</Button>
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsAdding(false);
+                  setEditingRecord(null);
+                  reset();
+                }}>取消</Button>
                 {needsApproval ? (
                   <Button type="button" variant="danger" onClick={onSwitchToApproval}>转填审批表</Button>
                 ) : (
-                  <Button type="submit">提交登记</Button>
+                  <Button type="submit">{editingRecord ? '保存修改' : '提交登记'}</Button>
                 )}
               </div>
             </div>
@@ -325,14 +370,24 @@ export function Registration({
                   </button>
                   </td>
                   <td className="px-6 py-4 text-sm">
-                  {isAdmin && (
-                    <button 
-                      onClick={() => onDelete(record.id)}
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleEdit(record)}
+                        className="text-indigo-400 hover:text-indigo-600 transition-colors"
+                        title="编辑记录"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      {isAdmin && (
+                        <button 
+                          onClick={() => onDelete(record.id)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="删除记录"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Info, Trash2, Search, ExternalLink, CheckCircle2, XCircle, Clock, LogIn, LogOut, CheckSquare, Square, AlertCircle } from 'lucide-react';
+import { Plus, Info, Trash2, Search, ExternalLink, CheckCircle2, XCircle, Clock, LogIn, LogOut, CheckSquare, Square, AlertCircle, Edit } from 'lucide-react';
 import { ApprovalRecord, approvalSchema, Region, QuoteType, ApprovalStatus } from '../types';
 import { Card, Button, Badge } from './UI';
 import { cn, formatCurrency, getStatusColor } from '../lib/utils';
@@ -10,6 +10,7 @@ import { loginWithGoogle } from '../firebase';
 interface ApprovalProps {
   data: ApprovalRecord[];
   onAdd: (record: ApprovalRecord) => void;
+  onUpdate: (record: ApprovalRecord) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: ApprovalStatus) => void;
   onBatchUpdateStatus: (ids: string[], status: ApprovalStatus) => void;
@@ -20,6 +21,7 @@ interface ApprovalProps {
 export function Approval({ 
   data, 
   onAdd, 
+  onUpdate,
   onDelete, 
   onUpdateStatus, 
   onBatchUpdateStatus,
@@ -27,6 +29,7 @@ export function Approval({
   user
 }: ApprovalProps) {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<ApprovalRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Selection State
@@ -46,6 +49,8 @@ export function Approval({
       corePurpose: '',
       reasonForExternal: '',
       quoteLink: '',
+      status: '待审批' as const,
+      approvalRemarks: '',
     }
   });
 
@@ -54,16 +59,46 @@ export function Approval({
   const totalPrice = unitPrice * sampleCount;
 
   const onSubmit = (formData: any) => {
-    const newRecord: ApprovalRecord = {
-      ...formData,
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString().split('T')[0],
-      totalPrice,
-      status: '待审批',
-    };
-    onAdd(newRecord);
+    if (editingRecord) {
+      const updatedRecord: ApprovalRecord = {
+        ...editingRecord,
+        ...formData,
+        totalPrice,
+      };
+      onUpdate(updatedRecord);
+    } else {
+      const newRecord: ApprovalRecord = {
+        ...formData,
+        id: Math.random().toString(36).substr(2, 9),
+        date: new Date().toISOString().split('T')[0],
+        totalPrice,
+        status: '待审批',
+      };
+      onAdd(newRecord);
+    }
     setIsAdding(false);
+    setEditingRecord(null);
     reset();
+  };
+
+  const handleEdit = (record: ApprovalRecord) => {
+    setEditingRecord(record);
+    setIsAdding(true);
+    reset({
+      applicant: record.applicant,
+      region: record.region,
+      sampleName: record.sampleName,
+      testProject: record.testProject,
+      institution: record.institution,
+      quoteType: record.quoteType,
+      unitPrice: record.unitPrice,
+      sampleCount: record.sampleCount,
+      corePurpose: record.corePurpose,
+      reasonForExternal: record.reasonForExternal,
+      quoteLink: record.quoteLink,
+      status: record.status,
+      approvalRemarks: record.approvalRemarks || '',
+    });
   };
 
   const filteredData = data.filter(item => 
@@ -134,20 +169,19 @@ export function Approval({
               <CheckCircle2 className="w-4 h-4" /> 批量通过 ({selectedIds.length})
             </Button>
           )}
-          {user ? (
-            <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 提交新审批
-            </Button>
-          ) : (
-            <Button onClick={loginWithGoogle} className="flex items-center gap-2">
-              <LogIn className="w-4 h-4" /> 登录以提交审批
+          <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" /> 提交新审批
+          </Button>
+          {!user && (
+            <Button variant="ghost" onClick={loginWithGoogle} className="flex items-center gap-2 text-slate-500">
+              <LogIn className="w-4 h-4" /> 管理员登录
             </Button>
           )}
         </div>
       </div>
 
       {isAdding && (
-        <Card title="提交机构测试审批" className="border-amber-200 ring-1 ring-amber-100">
+        <Card title={editingRecord ? "编辑机构测试审批" : "提交机构测试审批"} className="border-amber-200 ring-1 ring-amber-100">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-1">
@@ -203,6 +237,23 @@ export function Approval({
                 <label className="text-sm font-medium text-slate-700">报价链接 (可选)</label>
                 <input {...register('quoteLink')} placeholder="https://..." className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" />
               </div>
+              {isAdmin && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">审批状态</label>
+                    <select {...register('status')} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none">
+                      <option value="待审批">待审批</option>
+                      <option value="通过">通过</option>
+                      <option value="驳回">驳回</option>
+                      <option value="无需审批">无需审批</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">审批意见</label>
+                    <input {...register('approvalRemarks')} className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -226,8 +277,12 @@ export function Approval({
                 </span>
               </div>
               <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsAdding(false)}>取消</Button>
-                <Button type="submit">提交审批</Button>
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsAdding(false);
+                  setEditingRecord(null);
+                  reset();
+                }}>取消</Button>
+                <Button type="submit">{editingRecord ? '保存修改' : '提交审批'}</Button>
               </div>
             </div>
           </form>
@@ -306,6 +361,9 @@ export function Approval({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => handleEdit(record)} className="text-slate-400 hover:text-indigo-600">
+                    <Edit className="w-4 h-4" />
+                  </Button>
                   {isAdmin && record.status === '待审批' && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleStatusClick(record.id, '通过')} className="text-green-600 hover:bg-green-50 border-green-200">

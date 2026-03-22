@@ -105,37 +105,54 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setRegistrations([]);
-      setApprovals([]);
-      return;
-    }
-
     const qReg = query(collection(db, 'registrations'));
     const qAppr = query(collection(db, 'approvals'));
 
     const unsubReg = onSnapshot(qReg, (snapshot) => {
       setRegistrations(snapshot.docs.map(doc => doc.data() as RegistrationRecord));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'registrations'));
+    }, (error) => {
+      // Don't show error to non-admins if it's just a permission issue on initial load
+      if (error instanceof Error && error.message.includes('insufficient permissions')) {
+        console.warn('Insufficient permissions to list registrations');
+        return;
+      }
+      handleFirestoreError(error, OperationType.LIST, 'registrations');
+    });
 
     const unsubAppr = onSnapshot(qAppr, (snapshot) => {
       setApprovals(snapshot.docs.map(doc => doc.data() as ApprovalRecord));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'approvals'));
+    }, (error) => {
+      if (error instanceof Error && error.message.includes('insufficient permissions')) {
+        console.warn('Insufficient permissions to list approvals');
+        return;
+      }
+      handleFirestoreError(error, OperationType.LIST, 'approvals');
+    });
 
     return () => {
       unsubReg();
       unsubAppr();
     };
-  }, [user, isAdmin]);
+  }, []);
 
   // Handlers
   const handleAddRegistration = async (record: RegistrationRecord) => {
-    if (!user) return;
-    const newRecord = { ...record, authorUid: user.uid };
+    const newRecord = { ...record };
+    if (user) {
+      newRecord.authorUid = user.uid;
+    }
     try {
       await setDoc(doc(db, 'registrations', newRecord.id), newRecord);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'registrations');
+    }
+  };
+
+  const handleUpdateRegistration = async (record: RegistrationRecord) => {
+    try {
+      await setDoc(doc(db, 'registrations', record.id), record);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'registrations');
     }
   };
 
@@ -148,12 +165,22 @@ export default function App() {
   };
 
   const handleAddApproval = async (record: ApprovalRecord) => {
-    if (!user) return;
-    const newRecord = { ...record, authorUid: user.uid };
+    const newRecord = { ...record };
+    if (user) {
+      newRecord.authorUid = user.uid;
+    }
     try {
       await setDoc(doc(db, 'approvals', newRecord.id), newRecord);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'approvals');
+    }
+  };
+
+  const handleUpdateApproval = async (record: ApprovalRecord) => {
+    try {
+      await setDoc(doc(db, 'approvals', record.id), record);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'approvals');
     }
   };
 
@@ -350,6 +377,7 @@ export default function App() {
         <Registration 
           data={registrations} 
           onAdd={handleAddRegistration} 
+          onUpdate={handleUpdateRegistration}
           onDelete={handleDeleteRegistration}
           onUpdateStatus={handleUpdateRegistrationStatus}
           onBatchUpdateStatus={handleBatchUpdateRegistrationStatus}
@@ -364,6 +392,7 @@ export default function App() {
         <Approval 
           data={approvals} 
           onAdd={handleAddApproval} 
+          onUpdate={handleUpdateApproval}
           onDelete={handleDeleteApproval}
           onUpdateStatus={handleUpdateApprovalStatus}
           onBatchUpdateStatus={handleBatchUpdateApprovalStatus}
