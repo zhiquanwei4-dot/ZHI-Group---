@@ -86,12 +86,10 @@ export function LocalDirectory({ data, onAdd, onUpdate, onDelete, isAdmin, isAut
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        {isAuthenticated && (
-          <Button onClick={() => { setIsAdding(true); setEditingItem({} as LocalPlatformItem); }} className="gap-2">
-            <Plus size={18} />
-            <span>新增项目</span>
-          </Button>
-        )}
+        <Button onClick={() => { setIsAdding(true); setEditingItem({} as LocalPlatformItem); }} className="gap-2">
+          <Plus size={18} />
+          <span>新增项目</span>
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -141,7 +139,7 @@ export function LocalDirectory({ data, onAdd, onUpdate, onDelete, isAdmin, isAut
                           <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-center">HKU user 费用</th>
                           <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-center">计费方式</th>
                           <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase">备注</th>
-                          {isAuthenticated && <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-center">操作</th>}
+                          <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-center">操作</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -152,18 +150,16 @@ export function LocalDirectory({ data, onAdd, onUpdate, onDelete, isAdmin, isAut
                             <td className="px-6 py-4 text-sm text-indigo-600 font-medium text-center">{item.hkuUserFee}</td>
                             <td className="px-6 py-4 text-sm text-slate-500 text-center">{item.billingMethod}</td>
                             <td className="px-6 py-4 text-sm text-slate-400 italic">{item.remarks}</td>
-                            {isAuthenticated && (
-                              <td className="px-6 py-4 text-sm text-center">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => setEditingItem(item)}
-                                  className="text-slate-400 hover:text-indigo-600"
-                                >
-                                  <Edit2 size={16} />
-                                </Button>
-                              </td>
-                            )}
+                            <td className="px-6 py-4 text-sm text-center">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setEditingItem(item)}
+                                className="text-slate-400 hover:text-indigo-600"
+                              >
+                                <Edit2 size={16} />
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -176,16 +172,14 @@ export function LocalDirectory({ data, onAdd, onUpdate, onDelete, isAdmin, isAut
                       <div key={item.id} className="p-4 space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="font-bold text-slate-900 text-sm">{item.name}</div>
-                          {isAuthenticated && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => setEditingItem(item)}
-                              className="text-slate-400 p-1 h-auto"
-                            >
-                              <Edit2 size={16} />
-                            </Button>
-                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setEditingItem(item)}
+                            className="text-slate-400 p-1 h-auto"
+                          >
+                            <Edit2 size={16} />
+                          </Button>
                         </div>
                         <div className="text-xs text-slate-500">{item.instrumentName}</div>
                         <div className="flex items-center justify-between pt-1">
