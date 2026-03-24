@@ -324,6 +324,30 @@ export default function App() {
     }
   };
 
+  const handleAddLocalItem = async (item: LocalPlatformItem) => {
+    try {
+      await setDoc(doc(db, 'localItems', item.id), item);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'localItems');
+    }
+  };
+
+  const handleUpdateLocalItem = async (item: LocalPlatformItem) => {
+    try {
+      await setDoc(doc(db, 'localItems', item.id), item);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'localItems');
+    }
+  };
+
+  const handleDeleteLocalItem = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'localItems', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'localItems');
+    }
+  };
+
   // Excel Export
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
@@ -412,9 +436,19 @@ export default function App() {
           onDeleteProject={handleDeleteProject}
           onNavigateToRegistration={handleNavigateToRegistration}
           isAdmin={isAdmin}
+          isAuthenticated={!!user}
         />
       );
-      case 'local': return <LocalDirectory data={localItems} />;
+      case 'local': return (
+        <LocalDirectory 
+          data={localItems} 
+          onAdd={handleAddLocalItem}
+          onUpdate={handleUpdateLocalItem}
+          onDelete={handleDeleteLocalItem}
+          isAdmin={isAdmin}
+          isAuthenticated={!!user}
+        />
+      );
       case 'registration': return (
         <Registration 
           data={registrations} 
@@ -451,6 +485,7 @@ export default function App() {
           onDeleteProject={handleDeleteProject}
           onNavigateToRegistration={handleNavigateToRegistration}
           isAdmin={isAdmin}
+          isAuthenticated={!!user}
         />
       );
     }

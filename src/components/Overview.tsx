@@ -19,11 +19,12 @@ interface OverviewProps {
   onDeleteProject: (id: string) => void;
   onNavigateToRegistration: (projectName: string) => void;
   isAdmin: boolean;
+  isAuthenticated: boolean;
 }
 
 const columnHelper = createColumnHelper<TestProject>();
 
-export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject, onNavigateToRegistration, isAdmin }: OverviewProps) {
+export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject, onNavigateToRegistration, isAdmin, isAuthenticated }: OverviewProps) {
   const [globalFilter, setGlobalFilter] = useState('');
   const [localOnly, setLocalOnly] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -120,7 +121,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
       header: '备注',
       cell: info => <span className="text-sm text-slate-500">{info.getValue()}</span>,
     }),
-    ...(isAdmin ? [
+    ...(isAuthenticated ? [
       columnHelper.display({
         id: 'actions',
         header: '操作',
@@ -136,7 +137,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
         ),
       })
     ] : []),
-  ], [isAdmin]);
+  ], [isAuthenticated]);
 
   const filteredData = useMemo(() => {
     if (!localOnly) return data;
@@ -214,7 +215,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
             />
             <span className="text-sm text-slate-600 font-medium">仅显示本地可测</span>
           </label>
-          {isAdmin && (
+          {isAuthenticated && (
             <Button onClick={() => { setIsAdding(true); setEditingProject({} as TestProject); }} className="gap-2">
               <Plus size={18} />
               <span>新增项目</span>
@@ -271,7 +272,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
                 >
                   {project.name}
                 </button>
-                {isAdmin && (
+                {isAuthenticated && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -423,7 +424,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
               </div>
 
               <div className="mt-8 flex justify-between gap-3">
-                {!isAdding && (
+                {!isAdding && isAdmin && (
                   <Button 
                     type="button" 
                     variant="ghost" 

@@ -97,13 +97,14 @@ service cloud.firestore {
 
     match /testProjects/{projectId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidProject(request.resource.data);
+      allow create, update: if isAuthenticated() && isValidProject(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /localItems/{itemId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     match /registrations/{registrationId} {
