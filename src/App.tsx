@@ -62,7 +62,9 @@ export default function App() {
           if (userDoc.exists()) {
             const profile = userDoc.data() as User;
             setUserProfile(profile);
-            setIsAdmin(profile.role === 'admin' || firebaseUser.email === 'zhiquanwei4@gmail.com');
+            const adminStatus = profile.role === 'admin' || firebaseUser.email === 'zhiquanwei4@gmail.com';
+            console.log('User logged in, isAdmin:', adminStatus);
+            setIsAdmin(adminStatus);
           } else {
             const newProfile: User = {
               uid: firebaseUser.uid,
@@ -72,6 +74,7 @@ export default function App() {
             };
             await setDoc(userDocRef, newProfile);
             setUserProfile(newProfile);
+            console.log('New user profile created, isAdmin:', newProfile.role === 'admin');
             setIsAdmin(newProfile.role === 'admin');
           }
         } catch (error) {
@@ -89,16 +92,29 @@ export default function App() {
   // Firestore Listeners
   useEffect(() => {
     const unsubProjects = onSnapshot(collection(db, 'testProjects'), (snapshot) => {
-      const projects = snapshot.docs.map(doc => doc.data() as TestProject);
-      // Merge Firestore projects with mock projects (Firestore takes priority)
-      const merged = [...projects];
-      mockTestProjects.forEach(mock => {
-        if (!projects.find(p => p.id === mock.id)) {
-          merged.push(mock);
-        }
-      });
-      setTestProjects(merged);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'testProjects'));
+      try {
+        const projects = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return { ...data, id: doc.id } as TestProject;
+        });
+        console.log('Firestore projects updated:', projects.length, 'items');
+        
+        // Merge Firestore projects with mock projects (Firestore takes priority)
+        const merged = [...projects];
+        mockTestProjects.forEach(mock => {
+          if (!projects.find(p => p.id === mock.id)) {
+            merged.push(mock);
+          }
+        });
+        console.log('Final merged projects count:', merged.length);
+        setTestProjects(merged);
+      } catch (err) {
+        console.error('Error processing testProjects snapshot:', err);
+      }
+    }, (error) => {
+      console.error('Firestore Projects Listener Error:', error);
+      handleFirestoreError(error, OperationType.LIST, 'testProjects');
+    });
 
     const unsubLocal = onSnapshot(collection(db, 'localItems'), (snapshot) => {
       const items = snapshot.docs.map(doc => doc.data() as LocalPlatformItem);
@@ -274,17 +290,26 @@ export default function App() {
 
   const handleUpdateProject = async (updatedProject: TestProject) => {
     try {
+      console.log('handleUpdateProject: Attempting to update project in Firestore:', updatedProject.id);
       await setDoc(doc(db, 'testProjects', updatedProject.id), updatedProject);
+      console.log('handleUpdateProject: Successfully updated project:', updatedProject.id);
     } catch (error) {
+      console.error('handleUpdateProject: Error updating project:', error);
       handleFirestoreError(error, OperationType.UPDATE, 'testProjects');
+      throw error; // Ensure the error is propagated
     }
   };
 
   const handleAddProject = async (newProject: TestProject) => {
     try {
-      await setDoc(doc(db, 'testProjects', newProject.id), newProject);
+      console.log('handleAddProject: Attempting to add project to Firestore:', newProject.id);
+      const projectRef = doc(db, 'testProjects', newProject.id);
+      await setDoc(projectRef, newProject);
+      console.log('handleAddProject: Successfully added project:', newProject.id);
     } catch (error) {
+      console.error('handleAddProject: Error adding project:', error);
       handleFirestoreError(error, OperationType.CREATE, 'testProjects');
+      throw error; // Ensure the error is propagated
     }
   };
 

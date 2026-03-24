@@ -180,6 +180,7 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
       } else {
         await onUpdateProject(projectData);
       }
+      alert('保存成功');
       setEditingProject(null);
       setIsAdding(false);
     } catch (error) {
