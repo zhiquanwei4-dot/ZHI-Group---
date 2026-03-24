@@ -26,6 +26,7 @@ const columnHelper = createColumnHelper<TestProject>();
 export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject, onNavigateToRegistration, isAdmin }: OverviewProps) {
   const [globalFilter, setGlobalFilter] = useState('');
   const [localOnly, setLocalOnly] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<{ title: string; content: string } | null>(null);
   const [editingProject, setEditingProject] = useState<TestProject | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -154,31 +155,39 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const handleSaveProject = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveProject = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const projectData: any = {
-      id: editingProject?.id || Date.now().toString(),
-      name: formData.get('name') as string,
-      kuaiyicePrice: formData.get('kuaiyicePrice') as string,
-      kuaiyiceDetail: formData.get('kuaiyiceDetail') as string,
-      compassPrice: formData.get('compassPrice') as string,
-      compassDetail: formData.get('compassDetail') as string,
-      recommendation: formData.get('recommendation') as string,
-      hkuAvailable: formData.get('hkuAvailable') === 'on',
-      cityuAvailable: formData.get('cityuAvailable') === 'on',
-      milesAvailable: formData.get('milesAvailable') === 'on',
-      mainlandAvailable: formData.get('mainlandAvailable') === 'on',
-      remarks: formData.get('remarks') as string,
-    };
+    setIsSaving(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const projectData: any = {
+        id: editingProject?.id || Date.now().toString(),
+        name: formData.get('name') as string,
+        kuaiyicePrice: formData.get('kuaiyicePrice') as string,
+        kuaiyiceDetail: formData.get('kuaiyiceDetail') as string,
+        compassPrice: formData.get('compassPrice') as string,
+        compassDetail: formData.get('compassDetail') as string,
+        recommendation: formData.get('recommendation') as string,
+        hkuAvailable: formData.get('hkuAvailable') === 'on',
+        cityuAvailable: formData.get('cityuAvailable') === 'on',
+        milesAvailable: formData.get('milesAvailable') === 'on',
+        mainlandAvailable: formData.get('mainlandAvailable') === 'on',
+        remarks: formData.get('remarks') as string,
+      };
 
-    if (isAdding) {
-      onAddProject(projectData);
-    } else {
-      onUpdateProject(projectData);
+      if (isAdding) {
+        await onAddProject(projectData);
+      } else {
+        await onUpdateProject(projectData);
+      }
+      setEditingProject(null);
+      setIsAdding(false);
+    } catch (error) {
+      console.error('Failed to save project:', error);
+      alert('保存失败，请检查权限或网络连接');
+    } finally {
+      setIsSaving(false);
     }
-    setEditingProject(null);
-    setIsAdding(false);
   };
 
   return (
@@ -429,8 +438,10 @@ export function Overview({ data, onUpdateProject, onAddProject, onDeleteProject,
                   </Button>
                 )}
                 <div className="flex gap-3 ml-auto">
-                  <Button type="button" variant="ghost" onClick={() => { setEditingProject(null); setIsAdding(false); }}>取消</Button>
-                  <Button type="submit">保存更改</Button>
+                  <Button type="button" variant="ghost" onClick={() => { setEditingProject(null); setIsAdding(false); }} disabled={isSaving}>取消</Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? '保存中...' : '保存更改'}
+                  </Button>
                 </div>
               </div>
             </form>

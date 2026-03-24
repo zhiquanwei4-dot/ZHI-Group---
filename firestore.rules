@@ -40,8 +40,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          request.auth.token.email == "zhiquanwei4@gmail.com");
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          request.auth.token.email.lower() == "zhiquanwei4@gmail.com"
+        );
     }
 
     function hasRequiredFields(fields) {
@@ -59,6 +62,11 @@ service cloud.firestore {
       return hasRequiredFields(['uid', 'email', 'role']) &&
              data.uid is string && data.email is string && data.role is string &&
              data.role in ['admin', 'user'];
+    }
+
+    function isValidProject(data) {
+      return hasRequiredFields(['id', 'name']) &&
+             data.id is string && data.name is string;
     }
 
     function isValidRegistration(data) {
@@ -87,7 +95,7 @@ service cloud.firestore {
 
     match /testProjects/{projectId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isValidProject(request.resource.data);
     }
 
     match /localItems/{itemId} {
