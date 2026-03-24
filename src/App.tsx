@@ -62,15 +62,18 @@ export default function App() {
           if (userDoc.exists()) {
             const profile = userDoc.data() as User;
             setUserProfile(profile);
-            const adminStatus = profile.role === 'admin' || firebaseUser.email === 'zhiquanwei4@gmail.com';
+            const adminEmails = ['zhiquanwei4@gmail.com', 'test_institution@gmail.com'];
+            const adminStatus = profile.role === 'admin' || (firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase()));
             console.log('User logged in, isAdmin:', adminStatus);
             setIsAdmin(adminStatus);
           } else {
+            const adminEmails = ['zhiquanwei4@gmail.com', 'test_institution@gmail.com'];
+            const isDefaultAdmin = firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase());
             const newProfile: User = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
               displayName: firebaseUser.displayName || '',
-              role: firebaseUser.email === 'zhiquanwei4@gmail.com' ? 'admin' : 'user'
+              role: isDefaultAdmin ? 'admin' : 'user'
             };
             await setDoc(userDocRef, newProfile);
             setUserProfile(newProfile);
