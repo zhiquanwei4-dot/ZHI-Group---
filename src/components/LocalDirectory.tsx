@@ -9,7 +9,7 @@ interface LocalDirectoryProps {
   data: LocalPlatformItem[];
 }
 
-const platforms: Platform[] = ['ME', 'CHEM', '生命科学系', 'UCF', 'MILES'];
+const platforms: Platform[] = ['ME', 'CHEM', '生命科学系', 'UCF', 'MILES', 'CityU'];
 
 export function LocalDirectory({ data }: LocalDirectoryProps) {
   const [searchTerm, setSearchTerm] = useState('');

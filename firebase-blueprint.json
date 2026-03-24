@@ -1,8 +1,20 @@
 {
   "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["uid", "email", "role"]
+    },
     "TestProject": {
       "title": "TestProject",
-      "description": "A test project with pricing and availability information.",
+      "description": "Test project information",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -18,106 +30,69 @@
         "mainlandAvailable": { "type": "boolean" },
         "remarks": { "type": "string" }
       },
-      "required": ["id", "name", "kuaiyicePrice", "compassPrice", "recommendation", "hkuAvailable", "cityuAvailable", "milesAvailable", "mainlandAvailable", "remarks"]
+      "required": ["id", "name"]
     },
     "LocalPlatformItem": {
       "title": "LocalPlatformItem",
-      "description": "An instrument available on a local platform.",
+      "description": "Local platform instrument information",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "platform": { "type": "string", "enum": ["ME", "CHEM", "生命科学系", "UCF", "MILES"] },
+        "platform": { "type": "string" },
         "instrumentName": { "type": "string" },
         "hkuUserFee": { "type": "string" },
         "billingMethod": { "type": "string" },
         "remarks": { "type": "string" }
       },
-      "required": ["id", "name", "platform", "instrumentName", "hkuUserFee", "billingMethod", "remarks"]
+      "required": ["id", "name"]
     },
     "RegistrationRecord": {
       "title": "RegistrationRecord",
-      "description": "A record of a sample submission registration.",
+      "description": "Sample registration record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "applicant": { "type": "string" },
-        "region": { "type": "string", "enum": ["HKU", "MILES", "内地"] },
+        "date": { "type": "string" },
+        "projectName": { "type": "string" },
         "sampleName": { "type": "string" },
-        "testProject": { "type": "string" },
-        "sampleCount": { "type": "number" },
-        "checkedPlatforms": { "type": "string" },
-        "reason": { "type": "string" },
-        "institution": { "type": "string", "enum": ["快易测", "科学指南针"] },
-        "quoteType": { "type": "string", "enum": ["按样", "按小时", "按次", "其他"] },
-        "unitPrice": { "type": "number" },
-        "totalPrice": { "type": "number" },
+        "sampleCount": { "type": "integer" },
+        "testRequirements": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "contactPhone": { "type": "string" },
         "status": { "type": "string", "enum": ["待核对", "已核对"] },
-        "orderNumber": { "type": "string" },
         "authorUid": { "type": "string" }
       },
-      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "sampleCount", "checkedPlatforms", "reason", "institution", "quoteType", "unitPrice", "totalPrice", "status"]
+      "required": ["id", "projectName", "sampleName", "sampleCount", "status"]
     },
     "ApprovalRecord": {
       "title": "ApprovalRecord",
-      "description": "A record of a test approval request.",
+      "description": "Sample approval record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "applicant": { "type": "string" },
-        "region": { "type": "string", "enum": ["HKU", "MILES", "内地"] },
+        "date": { "type": "string" },
+        "projectName": { "type": "string" },
         "sampleName": { "type": "string" },
-        "testProject": { "type": "string" },
-        "institution": { "type": "string", "enum": ["快易测", "科学指南针"] },
-        "quoteType": { "type": "string", "enum": ["按样", "按小时", "按次", "其他"] },
-        "unitPrice": { "type": "number" },
-        "sampleCount": { "type": "number" },
-        "totalPrice": { "type": "number" },
-        "corePurpose": { "type": "string" },
-        "reasonForExternal": { "type": "string" },
-        "quoteLink": { "type": "string" },
-        "status": { "type": "string", "enum": ["待审批", "通过", "驳回", "无需审批"] },
-        "approvalDate": { "type": "string", "format": "date" },
+        "sampleCount": { "type": "integer" },
+        "testRequirements": { "type": "string" },
+        "applicant": { "type": "string" },
+        "region": { "type": "string" },
+        "quoteType": { "type": "string" },
+        "estimatedFee": { "type": "number" },
+        "status": { "type": "string", "enum": ["待审批", "已通过", "已驳回"] },
         "approvalRemarks": { "type": "string" },
+        "approvalDate": { "type": "string" },
         "authorUid": { "type": "string" }
       },
-      "required": ["id", "date", "applicant", "region", "sampleName", "testProject", "institution", "quoteType", "unitPrice", "sampleCount", "totalPrice", "corePurpose", "reasonForExternal", "status"]
-    },
-    "User": {
-      "title": "User",
-      "description": "User profile and role information.",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "user"] }
-      },
-      "required": ["uid", "email", "role"]
+      "required": ["id", "projectName", "sampleName", "sampleCount", "status"]
     }
   },
   "firestore": {
-    "testProjects": {
-      "schema": "TestProject",
-      "description": "Collection of test projects."
-    },
-    "localItems": {
-      "schema": "LocalPlatformItem",
-      "description": "Collection of local platform instruments."
-    },
-    "registrations": {
-      "schema": "RegistrationRecord",
-      "description": "Collection of sample submission registrations."
-    },
-    "approvals": {
-      "schema": "ApprovalRecord",
-      "description": "Collection of test approval requests."
-    },
-    "users": {
-      "schema": "User",
-      "description": "Collection of user profiles."
-    }
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/testProjects/{projectId}": { "schema": "TestProject", "description": "Test projects" },
+    "/localItems/{itemId}": { "schema": "LocalPlatformItem", "description": "Local platform items" },
+    "/registrations/{registrationId}": { "schema": "RegistrationRecord", "description": "Registration records" },
+    "/approvals/{approvalId}": { "schema": "ApprovalRecord", "description": "Approval records" }
   }
 }

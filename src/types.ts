@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // --- Types ---
 
-export type Platform = 'ME' | 'CHEM' | '生命科学系' | 'UCF' | 'MILES';
+export type Platform = 'ME' | 'CHEM' | '生命科学系' | 'UCF' | 'MILES' | 'CityU';
 export type Region = 'HKU' | 'MILES' | '内地';
 export type QuoteType = '按样' | '按小时' | '按次' | '其他';
 export type ApprovalStatus = '待审批' | '通过' | '驳回' | '无需审批';

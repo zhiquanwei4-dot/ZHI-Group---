@@ -90,12 +90,26 @@ export default function App() {
   useEffect(() => {
     const unsubProjects = onSnapshot(collection(db, 'testProjects'), (snapshot) => {
       const projects = snapshot.docs.map(doc => doc.data() as TestProject);
-      setTestProjects(projects.length > 0 ? projects : mockTestProjects);
+      // Merge Firestore projects with mock projects (Firestore takes priority)
+      const merged = [...projects];
+      mockTestProjects.forEach(mock => {
+        if (!projects.find(p => p.id === mock.id)) {
+          merged.push(mock);
+        }
+      });
+      setTestProjects(merged);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'testProjects'));
 
     const unsubLocal = onSnapshot(collection(db, 'localItems'), (snapshot) => {
       const items = snapshot.docs.map(doc => doc.data() as LocalPlatformItem);
-      setLocalItems(items.length > 0 ? items : mockLocalItems);
+      // Merge Firestore items with mock items (Firestore takes priority)
+      const merged = [...items];
+      mockLocalItems.forEach(mock => {
+        if (!items.find(i => i.id === mock.id)) {
+          merged.push(mock);
+        }
+      });
+      setLocalItems(merged);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'localItems'));
 
     return () => {

@@ -1,32 +1,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // ===============================================================
     // Assumed Data Model
     // ===============================================================
     //
+    // Collection: users
+    // Document ID: userId
+    // Fields: uid, email, displayName, role
+    //
     // Collection: testProjects
+    // Document ID: projectId
     // Fields: id, name, kuaiyicePrice, kuaiyiceDetail, compassPrice, compassDetail, recommendation, hkuAvailable, cityuAvailable, milesAvailable, mainlandAvailable, remarks
     //
     // Collection: localItems
+    // Document ID: itemId
     // Fields: id, name, platform, instrumentName, hkuUserFee, billingMethod, remarks
     //
     // Collection: registrations
-    // Fields: id, date, applicant, region, sampleName, testProject, sampleCount, checkedPlatforms, reason, institution, quoteType, unitPrice, totalPrice, status, orderNumber, authorUid
+    // Document ID: registrationId
+    // Fields: id, date, projectName, sampleName, sampleCount, testRequirements, contactPerson, contactPhone, status, authorUid
     //
     // Collection: approvals
-    // Fields: id, date, applicant, region, sampleName, testProject, institution, quoteType, unitPrice, sampleCount, totalPrice, corePurpose, reasonForExternal, quoteLink, status, approvalDate, approvalRemarks, authorUid
-    //
-    // Collection: users
-    // Fields: uid, email, displayName, role
+    // Document ID: approvalId
+    // Fields: id, date, projectName, sampleName, sampleCount, testRequirements, applicant, region, quoteType, estimatedFee, status, approvalRemarks, approvalDate, authorUid
     //
     // ===============================================================
 
     // ===============================================================
     // Helper Functions
     // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -37,11 +40,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (
-          (request.auth.token.email == "zhiquanwei4@gmail.com") ||
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-        );
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          request.auth.token.email == "zhiquanwei4@gmail.com");
     }
 
     function hasRequiredFields(fields) {
@@ -52,98 +52,61 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(fields);
     }
 
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    function isValidDateString(dateStr) {
-      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}.*");
-    }
-
     // ===============================================================
     // Domain Validators
     // ===============================================================
-
-    function isValidTestProject(data) {
-      return hasRequiredFields(['id', 'name', 'kuaiyicePrice', 'compassPrice', 'recommendation', 'hkuAvailable', 'cityuAvailable', 'milesAvailable', 'mainlandAvailable', 'remarks']) &&
-             data.id is string && data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             data.kuaiyicePrice is string && data.compassPrice is string &&
-             data.hkuAvailable is bool && data.cityuAvailable is bool && data.milesAvailable is bool && data.mainlandAvailable is bool;
-    }
-
-    function isValidLocalItem(data) {
-      return hasRequiredFields(['id', 'name', 'platform', 'instrumentName', 'hkuUserFee', 'billingMethod', 'remarks']) &&
-             data.id is string && data.name is string && data.platform in ['ME', 'CHEM', '生命科学系', 'UCF', 'MILES'] &&
-             data.instrumentName is string && data.hkuUserFee is string && data.billingMethod is string;
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role']) &&
+             data.uid is string && data.email is string && data.role is string &&
+             data.role in ['admin', 'user'];
     }
 
     function isValidRegistration(data) {
-      return hasRequiredFields(['id', 'date', 'applicant', 'region', 'sampleName', 'testProject', 'sampleCount', 'checkedPlatforms', 'reason', 'institution', 'quoteType', 'unitPrice', 'totalPrice', 'status']) &&
-             data.id is string && isValidDateString(data.date) && data.applicant is string &&
-             data.region in ['HKU', 'MILES', '内地'] && data.sampleName is string && data.testProject is string &&
-             data.sampleCount is number && data.sampleCount > 0 &&
-             data.institution in ['快易测', '科学指南针'] && data.quoteType in ['按样', '按小时', '按次', '其他'] &&
-             data.unitPrice is number && data.totalPrice is number &&
-             data.status in ['待核对', '已核对'] &&
-             (!('authorUid' in data) || data.authorUid is string);
+      return hasRequiredFields(['id', 'projectName', 'sampleName', 'sampleCount', 'status']) &&
+             data.id is string && data.projectName is string && data.sampleName is string &&
+             data.sampleCount is int && data.status is string &&
+             data.status in ['待核对', '已核对'];
     }
 
     function isValidApproval(data) {
-      return hasRequiredFields(['id', 'date', 'applicant', 'region', 'sampleName', 'testProject', 'institution', 'quoteType', 'unitPrice', 'sampleCount', 'totalPrice', 'corePurpose', 'reasonForExternal', 'status']) &&
-             data.id is string && isValidDateString(data.date) && data.applicant is string &&
-             data.region in ['HKU', 'MILES', '内地'] && data.sampleName is string && data.testProject is string &&
-             data.institution in ['快易测', '科学指南针'] && data.quoteType in ['按样', '按小时', '按次', '其他'] &&
-             data.unitPrice is number && data.sampleCount is number && data.totalPrice is number &&
-             data.status in ['待审批', '通过', '驳回', '无需审批'] &&
-             (!('authorUid' in data) || data.authorUid is string);
-    }
-
-    function isValidUser(data) {
-      return hasRequiredFields(['uid', 'email', 'role']) &&
-             data.uid is string && isValidEmail(data.email) &&
-             data.role in ['admin', 'user'];
+      return hasRequiredFields(['id', 'projectName', 'sampleName', 'sampleCount', 'status']) &&
+             data.id is string && data.projectName is string && data.sampleName is string &&
+             data.sampleCount is int && data.status is string &&
+             data.status in ['待审批', '已通过', '已驳回'];
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
 
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
     match /testProjects/{projectId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidTestProject(request.resource.data);
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     match /localItems/{itemId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidLocalItem(request.resource.data);
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
-    match /registrations/{regId} {
+    match /registrations/{registrationId} {
       allow read: if true;
-      allow create: if isValidRegistration(request.resource.data);
-      allow update: if (isAdmin() && isValidRegistration(request.resource.data)) ||
-        (isValidRegistration(request.resource.data) && 
-         request.resource.data.status == resource.data.status &&
-         (!('authorUid' in resource.data) || request.resource.data.authorUid == resource.data.authorUid));
+      allow create: if isValidRegistration(request.resource.data) && (request.resource.data.status == '待核对' || isAdmin());
+      allow update: if isValidRegistration(request.resource.data) && (isAdmin() || (request.resource.data.status == resource.data.status));
       allow delete: if isAdmin();
     }
 
-    match /approvals/{apprId} {
+    match /approvals/{approvalId} {
       allow read: if true;
-      allow create: if isValidApproval(request.resource.data);
-      allow update: if (isAdmin() && isValidApproval(request.resource.data)) ||
-        (isValidApproval(request.resource.data) && 
-         request.resource.data.status == resource.data.status &&
-         (!('authorUid' in resource.data) || request.resource.data.authorUid == resource.data.authorUid));
+      allow create: if isValidApproval(request.resource.data) && (request.resource.data.status == '待审批' || isAdmin());
+      allow update: if isValidApproval(request.resource.data) && (isAdmin() || (request.resource.data.status == resource.data.status));
       allow delete: if isAdmin();
-    }
-
-    match /users/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update, delete: if isAdmin();
     }
   }
 }
